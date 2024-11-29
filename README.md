@@ -8,11 +8,11 @@ Here is the structure of this repository.
 
 |-- **processed_data**: processed data to run the example notebooks \
 |-- **archetypal_regression**: Archetypal Analysis for the ATAC modality and ATAC-to-RNA regression code \
-|   |-- **archetypes.py**: delta-AA analysis (see https://github.com/ulfaslak/py_pcha) \
-|   |-- **archetypes_regression.py**: module for ATAC-to-RNA regression \
-|   |-- **util.py**: utility methods \
-|   |-- **util_atac.py**: utility methods for the ATAC component \
-|   |-- **util_regression.py**: utility for the regression \
+|&emsp; |-- **archetypes.py**: delta-AA analysis (see https://github.com/ulfaslak/py_pcha) \
+|&emsp; |-- **archetypes_regression.py**: module for ATAC-to-RNA regression \
+|&emsp; |-- **util.py**: utility methods \
+|&emsp; |-- **util_atac.py**: utility methods for the ATAC component \
+|&emsp; |-- **util_regression.py**: utility for the regression \
 |-- **ArchVelo.py**: ArchVelo methods \
 |-- **Test_AA.ipynb**: test notebook for archetypal analysis \
 |-- **ArchVelo_data_preparation.ipynb**: process data for ArchVelo analysis \
