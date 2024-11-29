@@ -6,19 +6,19 @@ ArchVelo is an algorithm for modeling multi-omic velocity from scRNA+ATAC data. 
 
 Here is the structure of this repository.
 
-|-- **processed_data**: processed data to run the example notebooks
-|-- **archetypal_regression**: Archetypal Analysis for the ATAC modality and ATAC-to-RNA regression code
-|   |-- **archetypes.py**: delta-AA analysis (see https://github.com/ulfaslak/py_pcha)
-|   |-- **archetypes_regression.py**: module for ATAC-to-RNA regression
-|   |-- **util.py**: utility methods
-|   |-- **util_atac.py**: utility methods 
-|   |-- **util_regression.py**: utility for the regression
-|-- **ArchVelo.py**: ArchVelo methods
-|-- **Test_AA.ipynb**: test notebook for archetypal analysis
-|-- **ArchVelo_data_preparation.ipynb**: process data for ArchVelo analysis
-|-- **Create_archetypes.ipynb**: apply AA to the dataset
-|-- **ArchVelo_apply.ipynb**: apply ArchVelo to the dataset
-|-- **ArchVelo_velocities.ipynb**: extract and analyze ArchVelo velocity fields
-|-- **Apply_multimodels.ipynb**: apply scVelo and MultiVelo to the dataset (for benchmarking purposes)
-|-- **Compare_latent_time_agreement.ipynb**: benchmark ArchVelo against MultiVelo and scVelo.
+|-- **processed_data**: processed data to run the example notebooks \
+|-- **archetypal_regression**: Archetypal Analysis for the ATAC modality and ATAC-to-RNA regression code \
+|   |-- **archetypes.py**: delta-AA analysis (see https://github.com/ulfaslak/py_pcha) \
+|   |-- **archetypes_regression.py**: module for ATAC-to-RNA regression \
+|   |-- **util.py**: utility methods \
+|   |-- **util_atac.py**: utility methods for the ATAC component \
+|   |-- **util_regression.py**: utility for the regression \
+|-- **ArchVelo.py**: ArchVelo methods \
+|-- **Test_AA.ipynb**: test notebook for archetypal analysis \
+|-- **ArchVelo_data_preparation.ipynb**: process data for ArchVelo analysis \
+|-- **Create_archetypes.ipynb**: apply AA to the dataset \
+|-- **ArchVelo_apply.ipynb**: apply ArchVelo to the dataset \
+|-- **ArchVelo_velocities.ipynb**: extract and analyze ArchVelo velocity fields \
+|-- **Apply_multimodels.ipynb**: apply scVelo and MultiVelo to the dataset (for benchmarking purposes) \
+|-- **Compare_latent_time_agreement.ipynb**: benchmark ArchVelo against MultiVelo and scVelo. \
 
