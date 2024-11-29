@@ -31,6 +31,7 @@ def apply_AA(indir, outdir, k = 8, maxiter = 200):
     # maxiter: max number of iterations for AA
     
     adata_atac_raw = sc.read_h5ad(indir+'processed_data/adata_atac_raw.h5ad')
+    atac = adata_atac_raw
     
     np.random.seed(57)
     trainc = np.random.choice(atac.shape[0], int(atac.shape[0]*3/4), replace = False)
