@@ -20,5 +20,5 @@ Here is the structure of this repository.
 |-- **ArchVelo_apply.ipynb**: apply ArchVelo to the dataset \
 |-- **ArchVelo_velocities.ipynb**: extract and analyze ArchVelo velocity fields \
 |-- **Apply_multimodels.ipynb**: apply scVelo and MultiVelo to the dataset (for benchmarking purposes) \
-|-- **Compare_latent_time_agreement.ipynb**: benchmark ArchVelo against MultiVelo and scVelo. \
+|-- **Compare_latent_time_agreement.ipynb**: benchmark ArchVelo against MultiVelo and scVelo.
 
