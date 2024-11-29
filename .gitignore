@@ -1,3 +1,5 @@
 .DS_Store
 .ipynb_checkpoints
 processed_data/adata_atac_raw.h5ad
+figures/
+
