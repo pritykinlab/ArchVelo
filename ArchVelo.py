@@ -1,4 +1,4 @@
-pimport warnings
+import warnings
 warnings.filterwarnings("ignore")
 
 import multivelo as mv
@@ -382,7 +382,7 @@ def func_to_optimize(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars,
     return c, u,s
 
 
-def optimize_pars(g, x0 = None, times = None, maxiter = 10, verbose = False, new = False, full_res_denoised = None, rna = None, gene_weights = None, max_c = None, min_c = None, unimputed_XC = None):
+def optimize_pars(g, x0 = None, times = None, maxiter = 10, verbose = False, new = False, full_res_denoised = None, rna = None, gene_weights = None, max_c = None, min_c = None, arches = None):
     if times is None:
         times = full_res_denoised[:,g].layers['fit_t']
     chrom_switches = np.zeros(8)
@@ -395,7 +395,7 @@ def optimize_pars(g, x0 = None, times = None, maxiter = 10, verbose = False, new
         chrom_on = np.zeros(8)
     #pars are alphas, t_sw1s, t_sw_rnas, rescale_us
     for j in range(8):
-        c_cur = minmax(unimputed_XC[:,j].layers['Mc'])
+        c_cur = minmax(arches[:,j].layers['Mc'])
         if new:
             chrom_on[j], chrom_switches[j], alpha_cs[j], scale_ccs[j] = optimize_chromatin_new(times, c_cur)
         else:
@@ -426,43 +426,23 @@ def optimize_pars(g, x0 = None, times = None, maxiter = 10, verbose = False, new
         cb = print_vals
     else:
         cb = None
-        
-    # res = scipy.optimize.dual_annealing(opt_all_pars, 
-    #                               x0 = x0,# 0.1, 0], 
-    #                               args = (g,chrom_switches, alpha_cs, scale_ccs, c0s, times, chrom_on, new),
-    #                                     #polish = False,
-    #                                     #tol = 0.01,
-    #                                     bounds = bnds,
-    #                                     seed = 57,
-    #                                     visit = 2.9,
-    #                                     #workers = 1,disp = True,
-    #                                     maxiter = maxiter,
-    #                                     callback = cb,
-    #                                     no_local_search = True)#options = {'maxiter':maxiter}
-    
+            
     res = scipy.optimize.minimize(opt_all_pars, 
-                                  x0 = x0,# 0.1, 0], 
+                                  x0 = x0,
                                   args = (g,chrom_switches, alpha_cs, scale_ccs, c0s, times, chrom_on, new, rna, gene_weights, max_c, min_c, full_res_denoised),
                                   method = 'Nelder-Mead', options = {'maxiter': maxiter},
-                                        #polish = False,
-                                        #tol = 0.01,
-                                        bounds = bnds)#,
-                                        #seed = 57,
-                                        #visit = 2.9,
-                                        #workers = 1,disp = True,
-                                        #maxiter = maxiter,
-                                        #callback = cb)#options = {'maxiter':maxiter}
+                                        bounds = bnds)
     print('Minimized')
     return res.x, res.fun, chrom_switches, alpha_cs, scale_ccs, chrom_on, c0s
 
 
 
-def optimize_all(g, maxiter1 = 30, max_outer_iter = 2, weight_c = 0.6, 
-                 verbose = False, plot = False, new = False, full_res_denoised = None, rna = None, gene_weights = None, max_c = None, min_c = None, unimputed_XC = None):
+def optimize_all(g, maxiter1 = 1500, max_outer_iter = 3, weight_c = 0.3, 
+                 verbose = False, plot = False, new = False, full_res_denoised = None, rna = None, gene_weights = None, max_c = None, min_c = None, arches = None):
     print('Fitting for '+str(g))
     u_all = np.ravel(rna[:,g].layers['Mu'].copy())
     s_all = np.ravel(rna[:,g].layers['Ms'].copy())
-    c_all = pd.DataFrame(unimputed_XC.layers['Mc']).apply(minmax).values.copy()
+    c_all = pd.DataFrame(arches.layers['Mc']).apply(minmax).values.copy()
     c_all = c_all*(gene_weights.loc[:,g].values*(max_c-min_c))
     #c_all = np.sum(c_all,1)
     #c_all = cur_prod.loc[:,g]
@@ -487,7 +467,7 @@ def optimize_all(g, maxiter1 = 30, max_outer_iter = 2, weight_c = 0.6,
                                                                        x0 = x0, 
                                                                        times = times, 
                                                                        maxiter = maxiter1,
-                                                                       verbose = verbose, new = new, rna = rna, gene_weights = gene_weights, max_c = max_c, min_c = min_c, unimputed_XC = unimputed_XC, full_res_denoised = full_res_denoised)
+                                                                       verbose = verbose, new = new, rna = rna, gene_weights = gene_weights, max_c = max_c, min_c = min_c, arches = arches, full_res_denoised = full_res_denoised)
                                                                                     
         if verbose:
         #print(chrom_switches, alpha_cs, scale_ccs, c0s)
@@ -496,7 +476,7 @@ def optimize_all(g, maxiter1 = 30, max_outer_iter = 2, weight_c = 0.6,
         _, u,s = func_to_optimize(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars, times = times, chrom_on = chrom_on, new = new, full_res_denoised = full_res_denoised)
         c = np.zeros(shape = (u.shape[0], 8))
         for i in range(8):
-            c_cur = unimputed_XC[:,i].layers['Mc']
+            c_cur = arches[:,i].layers['Mc']
             c_cur = minmax(c_cur)
             if new:
                 chrom_pars = optimize_chromatin_new(times, c_cur)
@@ -549,7 +529,7 @@ def optimize_all(g, maxiter1 = 30, max_outer_iter = 2, weight_c = 0.6,
             chrom_on_new = np.zeros(8)
         #pars are alphas, t_sw1s, t_sw_rnas, rescale_us
         for j in range(8):
-            c_cur = minmax(unimputed_XC[:,j].layers['Mc'])
+            c_cur = minmax(arches[:,j].layers['Mc'])
             if new:
                 chrom_on_new[j], chrom_switches_new[j], alpha_cs_new[j], scale_ccs_new[j] = optimize_chromatin_new(new_times, c_cur)
             else:
@@ -786,7 +766,7 @@ def phase_multivelo(g, model_to_use = None, rna = None):
     tt = model_to_use[:,g].layers['fit_t']
     uu = np.ravel(rna[:,g].layers['Mu'])
     ss = np.ravel(rna[:,g].layers['Ms'])
-    # c_all = pd.DataFrame(unimputed_XC.layers['Mc']).apply(minmax).values.copy()
+    # c_all = pd.DataFrame(arches.layers['Mc']).apply(minmax).values.copy()
     # c_all = c_all*(gene_weights.loc[:,g].values*(max_c-min_c))
     # c_all = np.sum(c_all,1)
     c_all = pd.DataFrame(prod.loc[:,g]).values.copy()#.apply(minmax).values.copy()
@@ -847,12 +827,12 @@ def err_all_full(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars, times = None
     u_all = rna[:,g].layers['Mu'].copy()
     s_all = rna[:,g].layers['Ms'].copy()
     
-#     c_all = pd.DataFrame(unimputed_XC.layers['Mc']).apply(minmax).values.copy()
+#     c_all = pd.DataFrame(arches.layers['Mc']).apply(minmax).values.copy()
 #     c_all = c_all*(gene_weights.loc[:,g].values*(max_c-min_c))
     
     max_c_total = max(prod.loc[:,g])
     min_c_total = min(prod.loc[:,g])
-    c_all = pd.DataFrame(unimputed_XC.layers['Mc']).values.copy()
+    c_all = pd.DataFrame(arches.layers['Mc']).values.copy()
     c_all = c_all*(gene_weights.loc[:,g].values)
     
     

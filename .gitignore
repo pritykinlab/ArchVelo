@@ -2,6 +2,7 @@
 .ipynb_checkpoints/
 processed_data/adata_atac_raw.h5ad
 processed_data/adata_atac_smooth.h5ad
+processed_data/adata_atac_AA_denoised.h5ad
 processed_data/.ipynb_checkpoints/
 archetypal_regression/.ipynb_checkpoints/
 modeling_results/
