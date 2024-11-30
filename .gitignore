@@ -1,7 +1,9 @@
 .DS_Store
-.ipynb_checkpoints
+.ipynb_checkpoints/
 processed_data/adata_atac_raw.h5ad
 processed_data/adata_atac_smooth.h5ad
+processed_data/.ipynb_checkpoints/
+archetypal_regression/.ipynb_checkpoints/
 modeling_results/
 figures/
 
