@@ -818,7 +818,7 @@ def extract_ArchVelo_pars(adata_rna,
     top_lik = full_res_denoised.var['fit_likelihood'].sort_values(ascending = False).index
     n_genes = len(top_lik)
     def process(i):
-        print(top_lik[i])
+        #print(top_lik[i])
         return optimize_all(top_lik[i], 
                             maxiter1 = maxiter1, 
                             max_outer_iter = max_outer_iter, 
