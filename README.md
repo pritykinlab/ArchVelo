@@ -3,4 +3,4 @@ ArchVelo is a method for modeling gene regulation and inferring cell trajectorie
 This repository contains the ArchVelo package. A demonstration of ArchVelo on a scRNA+ATAC-seq dataset for the mouse embryonic brain can be found in the ArchVelo_demo.ipynb notebook.
 In the demo, we start with preprocessed data; the inputs to ArchVelo are described at the top of the notebook. 
 
-Notebooks with the full pipeline of the ArchVelo analysis on the mouse embryonic brain, human hematopoietic stem cells and CD8 T cells in acute and chronic viral infection conditions can be found at https://github.com/pritykinlab/ArchVelo_notebooks
+Notebooks with a detailed description and application of the full pipeline of the ArchVelo analysis on the mouse embryonic brain, human hematopoietic stem cells and CD8 T cells in acute and chronic viral infection conditions can be found at https://github.com/pritykinlab/ArchVelo_notebooks
