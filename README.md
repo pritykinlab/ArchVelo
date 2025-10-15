@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="archvelo_logo.png" alt="ArchVelo Logo" width="400"/>
+  <img src="ArchVelo_logo.png" alt="ArchVelo Logo" width="400"/>
 </p>
 
 ArchVelo is a method for modeling gene regulation and inferring cell trajectories using simultaneous single-cell chromatin accessibility and transcriptomic profiling (scRNA+ATAC-seq). ArchVelo extracts a set of shared **archetypal** chromatin accessibility profiles and models their dynamic influence on transcription. As a result, ArchVelo **improves the accuracy of trajectory inference** compared to previous methods and **decomposes the velocity field into components** driven by distinct regulatory programs.
@@ -15,14 +15,6 @@ The package and its dependencies can be installed with a single command directly
 ```bash
 pip install git+https://github.com/pritykinlab/ArchVelo.git
 ```
-
-If you want to modify the source code, or run the demo, you should clone the repository and install it in the editable mode:
-```bash
-git clone https://github.com/pritykinlab/ArchVelo.git
-cd ArchVelo
-pip install -e .
-```
-
 
 ## Tutorials
 
