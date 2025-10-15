@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="archvelo_LOGO.png" alt="ArchVelo Logo" width="200"/>
+  <img src="archvelo_LOGO.jpg" alt="ArchVelo Logo" width="200"/>
 </p>
 
 ArchVelo is a method for modeling gene regulation and inferring cell trajectories using simultaneous single-cell chromatin accessibility and transcriptomic profiling (scRNA+ATAC-seq). ArchVelo extracts a set of shared **archetypal** chromatin accessibility profiles and models their dynamic influence on transcription. As a result, ArchVelo **improves the accuracy of trajectory inference** compared to previous methods and **decomposes the velocity field into components** driven by distinct regulatory programs.
