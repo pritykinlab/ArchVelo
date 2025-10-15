@@ -14,9 +14,9 @@ pip install git+https://github.com/pritykinlab/ArchVelo.git
 
 ## Tutorials
 
-*   **Simple Demonstration:** A demonstration of ArchVelo on a scRNA+ATAC-seq dataset for the mouse embryonic brain can be found in the `ArchVelo_demo.ipynb` notebook in this repository.
+*   **Demo:** A demonstration of ArchVelo on a scRNA+ATAC-seq dataset for the mouse embryonic brain can be found in the `ArchVelo_demo.ipynb` notebook in this repository.
 
-*   **Detailed End-to-End Analysis:** For a complete walkthrough of the full ArchVelo analysis pipeline, please see our dedicated notebooks repository. It includes applications to the mouse embryonic brain, human hematopoietic stem cells, and CD8 T cells in acute and chronic viral infection conditions.
+*   **Detailed End-to-End Analysis:** For a complete walkthrough of the ArchVelo analysis pipeline, please see our dedicated notebooks repository. It includes applications to the mouse embryonic brain, human hematopoietic stem cells, and CD8 T cells in acute and chronic viral infection conditions.
     *   **[ArchVelo Notebooks Repository](https://github.com/pritykinlab/ArchVelo_notebooks)**
  
 ## Issues
