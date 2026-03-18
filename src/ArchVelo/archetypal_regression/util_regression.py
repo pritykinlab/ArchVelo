@@ -33,3 +33,8 @@ def my_linear_pvals(coefs, X, y, fit_C, inter = True):
     pval = 2*(1 - scipy.stats.norm.cdf(np.abs(tstat)))
     return pval
 
+def inverse_sigm(x, eps = 1e-40):
+    x[x<=0.] = eps
+    x[x>=1.]= 1-eps
+    return np.log(x/(1-x))
+

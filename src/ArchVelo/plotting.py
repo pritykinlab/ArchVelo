@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-
+import scanpy as sc
 import scvelo as scv
 import multivelo as mv
 
@@ -17,14 +17,19 @@ from scvelo.tools.velocity_embedding import quiver_autoscale, velocity_embedding
 
 from multivelo.dynamical_chrom_func import smooth_scale
 
+from .modeling import generate_decomposition
+
 
 def velo_on_grid(avel,
                  key_vel = 'velo_s',
                  celltype_name = 'leiden',
-                 recalculate_graph = False):
+                 recalculate_graph = False,
+                 density = 1, 
+                 smooth = 0.5):
     avel_copy = avel.copy()
     if recalculate_graph:
-        avel_copy.var[key_vel+'_genes'] = True
+        avel_copy.var[key_vel+'_genes'] = avel_copy.var['velo_s_genes']#True
+        avel_copy.var[key_vel+'_norm_genes'] = avel_copy.var['velo_s_norm_genes']
         mv.velocity_graph(avel_copy, vkey = key_vel)
         mv.latent_time(avel_copy, vkey = key_vel)
     scv.pl.velocity_embedding_grid(avel_copy,
@@ -44,7 +49,8 @@ def velo_on_grid(avel,
     X_emb=xe,
     V_emb=ve,
     norms = norms,
-    density = 1,
+    density = density,
+    smooth = smooth
     )
     return gp, vel, vel_n
 
@@ -57,15 +63,19 @@ def vis_velo_on_grid(avel,
                      title = '',
                      ax = None,
                      transparent = True,
-                     recalculate_graph = False):
+                     recalculate_graph = False,
+                     scale = 0.5,
+                     density = 1,
+                     smooth = 0.5):
     if gp is None or vel is None or vel_n is None:
         gp, vel, vel_n = velo_on_grid(avel,
                  key_vel = key_vel,
-                 celltype_name = 'leiden',
-                 recalculate_graph = recalculate_graph)
+                 celltype_name = color_by,
+                 recalculate_graph = recalculate_graph,
+                 density = density,
+                 smooth = smooth)
 
     hl, hw, hal = 12,10,8
-    scale = 0.5
     quiver_kwargs = {"angles": "xy", "scale_units": "xy", "edgecolors": "k"}
     quiver_kwargs.update({ "width": 0.001,"headlength": hl / 2})#"width": 0.001, 
     quiver_kwargs.update({"headwidth": hw / 2, "headaxislength": hal / 2})
@@ -103,7 +113,7 @@ def vis_velo_on_grid(avel,
                     x, y, vx*nnn*2, vy*nnn*2, 
                     color="black",
                     linewidth = 0.5,
-                    scale = 0.5,
+                    scale = scale,
                     alpha =alpha,
                     **quiver_kwargs
                 )
@@ -112,12 +122,14 @@ def vis_velo_on_grid(avel,
     return ax
 
 
+
+
 def compute_velocity_on_grid_with_norms(
     X_emb,
     V_emb,
     norms,
-    density=None,
-    smooth=None,
+    density=1,
+    smooth=0.5,
     n_neighbors=None,
     min_mass=None,
     autoscale=True,
@@ -133,8 +145,8 @@ def compute_velocity_on_grid_with_norms(
 
     # prepare grid
     n_obs, n_dim = X_emb.shape
-    density = 1 if density is None else density
-    smooth = 0.5 if smooth is None else smooth
+    #density = 1 if density is None else density
+    #smooth = 0.5 if smooth is None else smooth
 
     grs = []
     for dim_i in range(n_dim):
@@ -205,10 +217,11 @@ def visualize_genes(gns,
     cc.index.names = [groups]
     cc = cc.groupby(groups).mean()
     cc = (cc-cc.min(0)).div(cc.max(0)-cc.min(0), 1)
-    sns.clustermap(cc, cmap = 'Greys', 
+    ff = sns.clustermap(cc, cmap = 'Greys', 
                   col_cluster = True,  **kwargs)
     if title is not None:
         plt.suptitle(title, y = 1.05, fontsize = 30)
+    return ff
 
 
 def apply_km(vls):
@@ -222,15 +235,14 @@ def apply_km(vls):
     lbs = np.array([args[lb] for lb in lbs])
     return lbs
     
+from multivelo.dynamical_chrom_func import smooth_scale
 def get_cells(avel,
              rna_conn,
              key_to_filter_cells,
-             smooth_cells = False,
+             smooth_cells = True,
              km = True,
              thres = 0.1,
-             plot = False):
-
-    
+             plot = False):    
     vls = np.nanmean(np.abs(avel.layers[key_to_filter_cells]), axis = 1)
     if smooth_cells:
         vls = smooth_scale(rna_conn, vls)
@@ -245,8 +257,66 @@ def get_cells(avel,
     else:
         cells = vls>thres
 
-    print('Number of cells: ', np.sum(cells))
+    #print('Number of cells: ', np.sum(cells))
     return cells
+    
+def get_cells_and_genes(avel, rna_conn, comp, 
+                        lik_cutoff = 0.05, 
+                        plot = False, load_thres = 2):
+    num_comps = avel.uns['archvelo_params']['num_comps']
+    def safe_mean_abs(layer_name):
+        arr = np.mean(np.abs(avel.layers[layer_name]), 0)
+        arr[arr == 0] = 1.0
+        return arr
+
+    mean_abs_s = safe_mean_abs('s')
+    for i in range(num_comps):
+        if 's_comp_'+str(i)+'_norm' not in avel.layers.keys():
+            avel.layers['s_comp_'+str(i)+'_norm'] = avel.layers['s_comp_'+str(i)]  / mean_abs_s
+
+    norm_props = pd.concat([pd.Series(np.mean(np.abs(avel.layers['s_comp_'+str(i)+'_norm']),axis = 0), index = avel.var_names) for i in range(num_comps)], axis = 1)
+    rel_order = norm_props.iloc[:,comp].dropna().sort_values(ascending = False).index
+    sign_genes = rel_order[norm_props.loc[rel_order,:].T.idxmax() == comp]
+    sign_genes = sign_genes.intersection(avel.var_names[avel.var['fit_likelihood']>lik_cutoff])
+    
+    cells = get_cells(avel,rna_conn = rna_conn,
+             key_to_filter_cells = 's_comp_'+str(comp), plot = plot)
+    loading = pd.Series(avel[cells, sign_genes].layers['s_comp_'+str(comp)+'_norm'].mean(0),
+          index = sign_genes)
+    sign_genes = sign_genes[loading>load_thres]
+    #print('Number of genes: ', len(sign_genes))
+    return cells, sign_genes
+
+def get_arch_latent_time(avel, rna_copy, rna_conn, comp, 
+                         lik_cutoff = 0.05, 
+                         n_pcs = 30, 
+                         n_neighbors = 15, 
+                         cells = None, 
+                         sign_genes = None, 
+                         load_thres = 0.2,
+                         **kwargs):
+    if cells is None:
+        cells, _ = get_cells_and_genes(avel, rna_conn, comp, lik_cutoff = lik_cutoff, load_thres = load_thres)
+    if sign_genes is None:
+        _, sign_genes = get_cells_and_genes(avel, rna_conn, comp, lik_cutoff = lik_cutoff, load_thres = load_thres)
+        
+    i = comp
+    key_vel = 'velo_s_comp_'+str(i)
+
+    avel_copy = rna_copy[cells, sign_genes].copy()
+    avel_copy.layers[key_vel] = avel[cells, sign_genes].layers[key_vel].copy()
+    avel_copy.layers['fit_t'] = avel[cells, sign_genes].layers['fit_t'].copy()
+    avel_copy.var['fit_likelihood'] = avel[cells, sign_genes].var['fit_likelihood'].copy()
+    avel_copy.uns[key_vel+'_params'] = avel.uns['velo_s_params']
+    avel_copy.var[key_vel+'_genes'] = avel[cells, sign_genes].var['velo_s_genes']
+
+    avel_copy.X = avel[cells, sign_genes].layers['s_comp_'+str(i)+'_norm']
+    sc.pp.pca(avel_copy, min(n_pcs, len(sign_genes)-1))
+    sc.pp.neighbors(avel_copy, n_neighbors)
+    mv.velocity_graph(avel_copy, vkey = key_vel)
+    mv.latent_time(avel_copy, vkey = key_vel, **kwargs)
+    return avel_copy.obs['latent_time']
+    
 
 def plot_phase(avel, 
                g, 
@@ -254,6 +324,7 @@ def plot_phase(avel,
                color_by = 'leiden', 
                pal = None,
                s = 5,
+               lw = 4,
                ax = None):
     if cells is None:
         cells = [True]*avel.shape[0]
@@ -277,70 +348,210 @@ def plot_phase(avel,
                     s = s)
     ax.plot(s_pred[np.argsort(tt)], 
             u_pred[np.argsort(tt)],
-           c = 'black', lw = 4)
+           c = 'black', lw = lw)
     ax.set_title(g)   
     return ax
 
-
-def plot_results(g, 
-                 model_to_use = None,
-                 pointsize = 2,
-                 archevelo = False,
-                 fig = None,
-                 axs = None,
-                 ax = None,
-                 color = 'black',
-                 lw = 2,
-                 alpha= 0.6,
-                 gray = True,
-                 fsize = None,
-                 res = None, 
-                 genes = None, 
-                 full_res_denoised = None):
-    i = np.where(genes == g)[0][0]
-    pars = res[i][0].copy()
-    num_comps = int((len(pars)-3)/3)
-    times = res[i][1].copy()
-    (chrom_switches, alpha_cs, scale_ccs, chrom_on, c0s) = res[i][2]
-    u_all = rna[:,g].layers['Mu'].copy()
-    s_all = rna[:,g].layers['Ms'].copy()
-    std_u = np.std(u_all)
-    std_s = np.std(s_all)
-    scale_u = std_u/std_s
-
-    c,u,s = func_to_optimize(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars, times = times,
-                            chrom_on = chrom_on, full_res_denoised = full_res_denoised)
-    std_c = np.std(np.sum(c,1))
-    scale_c = std_c/std_s
-    scale_u = std_u/std_s
-    c/=scale_c
-    c = c*(gene_weights.loc[:,g].values*(max_c-min_c))
-    resc_u = pars[3*num_comps]
-    u = u*(gene_weights.loc[:,g].values*(max_c-min_c))*resc_u
-    s = s*(gene_weights.loc[:,g].values*(max_c-min_c))
-
-    offs_u = 0
-    offs_s = 0
-    ordr = np.argsort(np.ravel(times))
-    if not archevelo:
-        fig, axs = mv_scatter_plot_return(model_to_use, g, 
-                                          pointsize = pointsize,
-                                          linewidth=lw,
-                                          colr = color,
-                                          show_switches=False,
-                                          alpha = alpha,
-                                          #color_by = 'celltype'
-                                          figsize = fsize,
-                                          fig = fig,axs = axs
-                                          )
-        if gray:
-            axs[0,0].scatter(s_all, u_all, c = 'darkgray', s = pointsize)
+def plot_fits(avel, g, 
+                 figsize = None, 
+                 dpi = 400, 
+                 celltype_name = 'leiden',
+                 plot_decomposition = False, 
+                 plot_u = True, 
+                 plot_s = True,
+                 fit_color = 'black',
+                 label_fontsize = 30,
+                 gene_fontsize = 30,
+                 legend_loc = 'upper left'
+                ):
+    num_comps = avel.uns['archvelo_params']['num_comps']
+    df, df_smooth = generate_decomposition(g, 
+                               avel, 
+                               celltype_name = celltype_name)
+    if plot_u and plot_s:
+        if figsize is None:
+            figsize = (10,4)
+        fig, axes = plt.subplots(1,2, figsize = figsize, dpi = dpi)
+        both = True
     else:
-        ax.plot(np.sum(s,1)[ordr], (np.sum(u,1)*scale_u)[ordr], 
-                     c = color, lw = lw,alpha =alpha)
-        if gray:
-            ax.scatter(s_all, u_all, c = 'darkgray', s = pointsize)
-    return fig, axs
+        if figsize is None:
+            figsize = (5,4)
+        fig, ax = plt.subplots(1,1, figsize = figsize, dpi = dpi)
+        both = False
+        axes = [ax]
+    ncol = 1
+    if plot_u:
+        if both:
+            ax = axes[0]
+        sns.lineplot(data =  df.query('Variable == "u"').query('Archetype=="Total"'),
+                     x = 'Time', y = 'Value',hue = 'Archetype',  palette  = [fit_color], legend = True,
+                    alpha = 1, lw = 4, ax = ax)
+        
+        sns.scatterplot(data =  df.query('Archetype == "Mu"'),
+                     x = 'Time', y = 'Value',hue = 'Archetype',  palette  = ['black'], legend = True,
+                    alpha = 0.2, s = 8, ax = ax)
+        
+        if plot_decomposition:
+            sns.lineplot(data =  df_smooth.query('Variable == "u"').query('Archetype!="Total"'),
+                         x = 'Time', y = 'Value', hue = 'Archetype', palette = 'rainbow',
+                         linestyle = 'dashed', legend = 'full',
+                        alpha = 1, lw = 3, ax = ax)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_decomposition:
+            labels = ['Total', 'Mu']+[r'$u_'+str(i)+'$' for i in range(num_comps)]
+            ncol = 2
+        ax.legend(ncol = ncol, 
+                  title = '', 
+                  handles = handles, 
+                  labels = labels,
+                  loc = legend_loc)#,bbox_to_anchor = (1,1))
+        plt.setp(ax.get_legend().get_texts(), fontsize='11') # for legend text
+        plt.setp(ax.get_legend().get_title(), fontsize='11') # for legend title
+        ax.set_xlabel('ArchVelo latent time', fontsize = 2/3*label_fontsize)
+        ax.set_ylabel(r'$u$', fontsize = label_fontsize)
+    
+    if plot_s:
+        if both:
+            ax = axes[1]
+        sns.lineplot(data =  df.query('Variable == "s"').query('Archetype=="Total"'),
+                     x = 'Time', y = 'Value',hue = 'Archetype',  palette  = [fit_color], legend = True,
+                    alpha = 1, lw = 4, ax = ax)
+        
+        sns.scatterplot(data =  df.query('Archetype == "Ms"'),
+                     x = 'Time', y = 'Value',hue = 'Archetype',  palette  = ['black'], legend = True,
+                    alpha = 0.2, s = 8, ax = ax)
+        
+        if plot_decomposition:
+            sns.lineplot(data =  df_smooth.query('Variable == "s"').query('Archetype!="Total"'),
+                         x = 'Time', y = 'Value', hue = 'Archetype', palette = 'rainbow',
+                         linestyle = 'dashed', legend = 'full',
+                        alpha = 1, lw = 3, ax = ax)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_decomposition:
+            labels = ['Total', 'Ms']+[r'$s_'+str(i)+'$' for i in range(num_comps)]
+            ncol = 2
+        ax.legend(ncol = ncol, 
+                  title = '', 
+                  handles = handles, 
+                  labels = labels,
+                  loc = legend_loc)#,bbox_to_anchor = (1,1))
+        plt.setp(ax.get_legend().get_texts(), fontsize='11') # for legend text
+        plt.setp(ax.get_legend().get_title(), fontsize='11') # for legend title
+        ax.set_xlabel('ArchVelo latent time', fontsize = 2/3*label_fontsize)
+        ax.set_ylabel(r'$s$', fontsize = label_fontsize)
+    plt.tight_layout()
+    for ax in axes:
+        ax.set_title(g, fontsize = gene_fontsize)
+    return fig
+
+def plot_velo(avel, g, 
+                 figsize = None, 
+                 dpi = 400, 
+                 celltype_name = 'leiden',
+                 plot_decomposition = False, 
+                 fit_color = 'black',
+                 label_fontsize = 30,
+                 gene_fontsize = 30,
+                 legend_loc = 'upper left'
+                ):
+    num_comps = avel.uns['archvelo_params']['num_comps']
+    df, df_smooth = generate_decomposition(g, 
+                               avel, 
+                               celltype_name = celltype_name)
+    if figsize is None:
+            figsize = (5,4)
+    fig, ax = plt.subplots(1,1, figsize = figsize, dpi = dpi)
+
+    sns.lineplot(data =  df.query('Variable == "velo_s"').query('Archetype=="Total"'),
+                 x = 'Time', y = 'Value',hue = 'Archetype',  palette  = [fit_color], legend = True,
+                alpha = 1, lw = 4, ax = ax)
+    
+    
+    if plot_decomposition:
+        sns.lineplot(data =  df_smooth.query('Variable == "velo_s"').query('Archetype!="Total"'),
+                     x = 'Time', y = 'Value', hue = 'Archetype', palette = 'rainbow',
+                     linestyle = 'dashed', legend = 'full',
+                    alpha = 1, lw = 3, ax = ax)
+        
+    handles, labels = ax.get_legend_handles_labels()
+    if plot_decomposition:
+        labels = ['Total']+[r'$v_'+str(i)+'$' for i in range(num_comps)]
+        ncol = 2
+    ax.legend(ncol = ncol, 
+              title = '', 
+              handles = handles, 
+              labels = labels,
+              loc = legend_loc)#,bbox_to_anchor = (1,1))
+    plt.setp(ax.get_legend().get_texts(), fontsize='11') # for legend text
+    plt.setp(ax.get_legend().get_title(), fontsize='11') # for legend title
+    ax.set_xlabel('ArchVelo latent time', fontsize = 2/3*label_fontsize)
+    ax.set_ylabel(r'$v$', fontsize = label_fontsize)
+    plt.tight_layout()
+    ax.set_title(g, fontsize = gene_fontsize)
+
+    return fig
+
+# def plot_results(g, 
+#                  model_to_use = None,
+#                  pointsize = 2,
+#                  archevelo = False,
+#                  fig = None,
+#                  axs = None,
+#                  ax = None,
+#                  color = 'black',
+#                  lw = 2,
+#                  alpha= 0.6,
+#                  gray = True,
+#                  fsize = None,
+#                  res = None, 
+#                  genes = None, 
+#                  full_res_denoised = None):
+#     i = np.where(genes == g)[0][0]
+#     pars = res[i][0].copy()
+#     num_comps = int((len(pars)-3)/3)
+#     times = res[i][1].copy()
+#     (chrom_switches, alpha_cs, scale_ccs, chrom_on, c0s) = res[i][2]
+#     u_all = rna[:,g].layers['Mu'].copy()
+#     s_all = rna[:,g].layers['Ms'].copy()
+#     std_u = np.std(u_all)
+#     std_s = np.std(s_all)
+#     scale_u = std_u/std_s
+
+#     c,u,s = func_to_optimize(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars, times = times,
+#                             chrom_on = chrom_on, full_res_denoised = full_res_denoised)
+#     std_c = np.std(np.sum(c,1))
+#     scale_c = std_c/std_s
+#     scale_u = std_u/std_s
+#     c/=scale_c
+#     c = c*(gene_weights.loc[:,g].values*(max_c-min_c))
+#     resc_u = pars[3*num_comps]
+#     u = u*(gene_weights.loc[:,g].values*(max_c-min_c))*resc_u
+#     s = s*(gene_weights.loc[:,g].values*(max_c-min_c))
+
+#     offs_u = 0
+#     offs_s = 0
+#     ordr = np.argsort(np.ravel(times))
+#     if not archevelo:
+#         fig, axs = mv_scatter_plot_return(model_to_use, g, 
+#                                           pointsize = pointsize,
+#                                           linewidth=lw,
+#                                           colr = color,
+#                                           show_switches=False,
+#                                           alpha = alpha,
+#                                           #color_by = 'celltype'
+#                                           figsize = fsize,
+#                                           fig = fig,axs = axs
+#                                           )
+#         if gray:
+#             axs[0,0].scatter(s_all, u_all, c = 'darkgray', s = pointsize)
+#     else:
+#         ax.plot(np.sum(s,1)[ordr], (np.sum(u,1)*scale_u)[ordr], 
+#                      c = color, lw = lw,alpha =alpha)
+#         if gray:
+#             ax.scatter(s_all, u_all, c = 'darkgray', s = pointsize)
+#     return fig, axs
 
 def mv_scatter_plot_return(adata,
                  genes,

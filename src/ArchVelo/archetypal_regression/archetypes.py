@@ -2,11 +2,13 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 
-from py_pcha import PCHA
+from .My_PCHA import PCHA
 
 # archetypal analysis (AA) for ATAC modality without splitting into train and test sets; 
 # only specifies in and out directories which should contain data in correct format
-def apply_AA_no_test(atac, outdir = '', k = 8, delta = 0.1, conv_crit=1E-6, maxiter = 200):
+def apply_AA_no_test(atac, outdir = '', k = 8, delta = 0.1, 
+                     conv_crit=1E-6, maxiter = 200, var_threshold = 0.9999,
+                     init = 'furthest_sum', verbose = False):
     # indir: directory containing processed data
     # outdir: directory where the results will be saved
     # k: number of archetypes
@@ -17,16 +19,19 @@ def apply_AA_no_test(atac, outdir = '', k = 8, delta = 0.1, conv_crit=1E-6, maxi
                       delta = delta,
                       conv_crit=conv_crit,
                       maxiter = maxiter,
+                      var_threshold = var_threshold,
                       outdir = outdir,
+                      init = init,
                       layer = 'pearson',
-                      verbose = True)
+                      verbose = verbose)
 
     return XC, S
 
 # archetypal analysis (AA) for ATAC modality, splitting into train and test sets; 
 # only specifies in and out directories which should contain data in correct format
     
-def apply_AA(indir, outdir, k = 8, conv_crit=1E-6, maxiter = 200):
+def apply_AA(indir, outdir, k = 8, delta = 0.1, conv_crit=1E-6, maxiter = 200, var_threshold = 0.9999,
+             init = 'furthest_sum', verbose = False):
     # indir: directory containing processed data
     # outdir: directory where the results will be saved
     # k: number of archetypes
@@ -45,13 +50,16 @@ def apply_AA(indir, outdir, k = 8, conv_crit=1E-6, maxiter = 200):
     test_atac = atac[testc,:].copy()
     XC_train, XC_test, S, XC_train_folds, XC_test_folds, S_folds = create_archetypes(train_atac, test_atac, 
                       num_comps =k,
+                      delta = delta,
                       conv_crit = conv_crit,
                       maxiter = maxiter,
+                      var_threshold = var_threshold,
                       outdir = outdir,
                       layer = 'pearson',
+                      init = init, 
                       create_folds = False,
                       fold_index = None,
-                      verbose = True)                                                              
+                      verbose = verbose)                                                              
     
 # archetypal analysis (AA) for ATAC modality, dataset explicitly supplied
 
@@ -59,10 +67,12 @@ def create_archetypes_no_test(atac,
                       num_comps = 8,
                       delta = 0.1,
                       conv_crit=1E-6,
-                      maxiter = 50,
+                      maxiter = 200,
+                      var_threshold = 0.9999,
                       outdir = '',
                       layer = 'pearson',
-                      verbose = False):
+                      verbose = False,
+                      init = 'furthest_sum'):
     
     # atac: anndata object containing ATAC modality
     # num_comps: number of components for AA
@@ -80,6 +90,8 @@ def create_archetypes_no_test(atac,
                delta = delta,
                conv_crit = conv_crit, 
                maxiter = maxiter, 
+               init = init,
+               var_threshold = var_threshold,
                verbose = verbose)
     #save results
     XC, S, C, SSE, varexpl = res
@@ -101,14 +113,16 @@ def create_archetypes(train_atac, test_atac,
                       num_comps = 8,
                       delta = 0.1,
                       conv_crit=1E-6,
-                      maxiter = 50,
+                      maxiter = 200,
+                      var_threshold = 0.9999,
                       outdir = '',
                       layer = 'pearson',
                       transposed = False,
                       create_folds = False,
                       only_folds = False,
                       fold_index = None,
-                      verbose = False):
+                      verbose = False,
+                      init = 'furthest_sum'):
     # train_atac: anndata object containing ATAC modality, train set
     # test_atac: anndata object containing ATAC modality, test set
     # num_comps: number of components for AA
@@ -125,7 +139,14 @@ def create_archetypes(train_atac, test_atac,
     to_cluster_test = test_atac.layers[layer]
     if not only_folds:
         print('Fitting train data...')
-        res = PCHA(np.array(to_cluster), noc = num_comps, delta = delta, conv_crit = conv_crit, maxiter = maxiter, verbose = verbose)
+        res = PCHA(np.array(to_cluster), 
+                   noc = num_comps, 
+                   delta = delta, 
+                   conv_crit = conv_crit, 
+                   init = init, 
+                   maxiter = maxiter, 
+                   var_threshold = var_threshold,
+                   verbose = verbose)
         #save results
         XC, S, C, SSE, varexpl = res
                     
@@ -152,22 +173,28 @@ def create_archetypes(train_atac, test_atac,
             to_cluster_test = all_cluster[l == fld,:]
             #if fld>0:
             print('Fitting train data...')
-            res = PCHA(to_cluster_train, noc = num_comps, delta = delta, conv_crit = conv_crit, maxiter = maxiter, verbose = verbose)
+            res = PCHA(to_cluster_train, 
+                       noc = num_comps, 
+                       delta = delta, 
+                       conv_crit = conv_crit, 
+                       init = init, maxiter = maxiter, 
+                       var_threshold = var_threshold,
+                       verbose = verbose)
             XC, S, C, SSE, varexpl = res
             
-            XC_test = np.matmul(np.array(to_cluster_test), C)
+            cur_XC_test = np.matmul(np.array(to_cluster_test), C)
             
             S = pd.DataFrame(S, columns = train_atac.var.index)
-            XC_train = pd.DataFrame(XC, index = train_atac.obs.index[l!=fld])
+            cur_XC_train = pd.DataFrame(XC, index = train_atac.obs.index[l!=fld])
             print('Transforming test data...')
                         
-            XC_test = pd.DataFrame(XC_test, index = train_atac.obs.index[l==fld])
+            cur_XC_test = pd.DataFrame(cur_XC_test, index = train_atac.obs.index[l==fld])
             
-            XC_train_folds[fld] = XC_train
-            XC_test_folds[fld] = XC_test
+            XC_train_folds[fld] = cur_XC_train
+            XC_test_folds[fld] = cur_XC_test
             S_folds[fld] = S
-            XC_train.to_csv(outdir+'/cell_train_on_peaks_'+str(num_comps)+'_comps_fold_'+str(fld)+'.csv')
-            XC_test.to_csv(outdir+'/cell_test_on_peaks_'+str(num_comps)+'_comps_fold_'+str(fld)+'.csv')
+            cur_XC_train.to_csv(outdir+'/cell_train_on_peaks_'+str(num_comps)+'_comps_fold_'+str(fld)+'.csv')
+            cur_XC_test.to_csv(outdir+'/cell_test_on_peaks_'+str(num_comps)+'_comps_fold_'+str(fld)+'.csv')
             S.to_csv(outdir+'/peak_on_peaks_'+str(num_comps)+'_comps_fold_'+str(fld)+'.csv')
     
     return XC_train, XC_test, S, XC_train_folds, XC_test_folds, S_folds

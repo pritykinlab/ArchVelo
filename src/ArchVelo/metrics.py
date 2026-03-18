@@ -5,8 +5,10 @@ This module contains util functions for computing evaluation scores.
 """
 
 import numpy as np
+import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-
+from scipy.stats import wilcoxon
+from statsmodels.sandbox.stats.multicomp import multipletests
 def summary_scores(all_scores):
     """Summarize group scores.
     
@@ -110,47 +112,90 @@ def cross_boundary_correctness(
     
     return scores, np.mean([sc for sc in scores.values()])
 
-# def inner_cluster_coh(adata, k_cluster, k_velocity, return_raw=False):
-#     """In-cluster Coherence Score.
+def create_relative_performance_table(df: pd.DataFrame, 
+                                      control_method: str, 
+                                      alpha: float = 0.05) -> pd.DataFrame:
+    """
+    Compares all methods against a specified control method for each Edge,
+    using a three-marker system for relative performance.
+    """
     
-#     Args:
-#         adata (Anndata): 
-#             Anndata object.
-#         k_cluster (str): 
-#             key to the cluster column in adata.obs DataFrame.
-#         k_velocity (str): 
-#             key to the velocity matrix in adata.obsm.
-#         return_raw (bool): 
-#             return aggregated or raw scores.
-        
-#     Returns:
-#         dict: 
-#             all_scores indexed by cluster_edges mean scores indexed by cluster_edges
-#         float: 
-#             averaged score over all cells.
-        
-#     """
-#     clusters = np.unique(adata.obs[k_cluster])
-#     scores = {}
-#     all_scores = {}
+    # 1. Setup
+    edges = df['Edge'].unique()
+    methods = df['Method'].unique()
+    other_methods = [m for m in methods if m != control_method]
+    
+    if control_method not in methods:
+        print(f"Error: Control method '{control_method}' not found in the data.")
+        return pd.DataFrame()
 
-#     for cat in clusters:
-#         sel = adata.obs[k_cluster] == cat
-#         nbs = adata.uns['neighbors']['indices'][sel]
-#         same_cat_nodes = map(lambda nodes:keep_type(adata, nodes, cat, k_cluster), nbs)
+    results_table = pd.DataFrame(index=edges, columns=methods).fillna('')
+    
+    # 2. Comparison and Correction by Edge
+    for edge in edges:
+        edge_data = df[df['Edge'] == edge]
+        
+        # Data for the control method on this edge
+        data_control = edge_data[edge_data['Method'] == control_method]['CBD'].values
+        
+        if len(data_control) < 2:
+            results_table.loc[edge, :] = 'Insufficient data'
+            continue
 
-#         velocities = adata.layers[k_velocity]
-#         cat_vels = velocities[sel]
-#         cat_score = [cosine_similarity(cat_vels[[ith]], velocities[nodes]).mean() 
-#                      for ith, nodes in enumerate(same_cat_nodes) 
-#                      if len(nodes) > 0]
-#         all_scores[cat] = cat_score
-#         scores[cat] = np.mean(cat_score)
-    
-#     if return_raw:
-#         return all_scores
-    
-#     return scores, np.mean([sc for sc in scores.values()])
+        p_values_for_fdr = []
+        comparison_metadata = []
+
+        # Pairwise comparison: Control vs. every Other Method
+        for other_method in other_methods:
+            data_other = edge_data[edge_data['Method'] == other_method]['CBD'].values
+            
+            if len(data_other) < 2:
+                results_table.loc[edge, other_method] = 'ID'
+                continue
+            
+            # Wilcoxon signed-rank test (two-sided)
+            _, p_value = wilcoxon(data_control, data_other, alternative='two-sided')
+            
+            p_values_for_fdr.append(p_value)
+            comparison_metadata.append(other_method)
+
+        # 3. FDR Correction (Benjamini-Hochberg) for this EDGE only
+        if not p_values_for_fdr:
+            continue
+
+        reject, _, _, _ = multipletests(
+            p_values_for_fdr, 
+            alpha=alpha, 
+            method='fdr_bh'
+        )
+
+        # 4. Determine Markers based on FDR-corrected results
+        median_control = np.median(data_control)
+        #mean_control = np.mean(data_control)
+        
+        for i, other_method in enumerate(comparison_metadata):
+            is_significant_difference = reject[i]
+            
+            data_other = edge_data[edge_data['Method'] == other_method]['CBD'].values
+            median_other = np.median(data_other)
+            #mean_other = np.mean(data_other)
+            
+            # Assuming higher CBD is better:
+            is_control_better = median_control > median_other
+            #is_control_better = mean_control > mean_other
+            
+            if is_significant_difference:
+                if is_control_better:
+                    # Control is significantly better
+                    results_table.loc[edge, other_method] = '★'
+                else:
+                    # Other method is significantly better
+                    results_table.loc[edge, other_method] = '-'
+            else:
+                # No significant difference
+                results_table.loc[edge, other_method] = 'NS'
+
+    return results_table
 
 def evaluate(
     adata, 
