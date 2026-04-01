@@ -10,9 +10,8 @@ from sklearn.kernel_approximation import Nystroem
 from sklearn.pipeline import make_pipeline
 import sys
 
-from util import *
-from util_atac import *
-from util_regression import *
+from .util_atac import *
+from .util_regression import *
 
 def generate_features(g,
                       peaks_to_genes,
