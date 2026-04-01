@@ -10,11 +10,8 @@ from sklearn.kernel_approximation import Nystroem
 from sklearn.pipeline import make_pipeline
 import sys
 
-# Append path if not already present
-sys.path.append('/mnt/home/mavdeeva/ceph/scvelo/Yura_project/atac_regression_package/')
 from util import *
 from util_atac import *
-from plotting import *
 from util_regression import *
 
 def generate_features(g,
@@ -26,7 +23,6 @@ def generate_features(g,
                       peak_comps,
                       atac_layer='X_magic',
                       feature_type='soft_clust'):  
-    
     # Optimize index querying
     rel_peaks = peaks_to_genes.query('gene == "'+str(g)+'"').index
     rel_peaks = rel_peaks.intersection(train_df.var.index).intersection(test_df.var.index)
