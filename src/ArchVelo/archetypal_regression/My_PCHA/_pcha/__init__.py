@@ -1,3 +1,6 @@
+# This subpackage contains modified code derived from work by Morten Mørup
+# and Ulf Aslak. See LICENCE and NOTICE in upstream directory.
+
 """Principal Convex Hull Analysis (PCHA) / Archetypal Analysis.
 
 This module is a Python translation of a Matlab module. Avaiable at:

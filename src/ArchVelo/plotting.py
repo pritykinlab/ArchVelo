@@ -493,66 +493,37 @@ def plot_velo(avel, g,
 
     return fig
 
-# def plot_results(g, 
-#                  model_to_use = None,
-#                  pointsize = 2,
-#                  archevelo = False,
-#                  fig = None,
-#                  axs = None,
-#                  ax = None,
-#                  color = 'black',
-#                  lw = 2,
-#                  alpha= 0.6,
-#                  gray = True,
-#                  fsize = None,
-#                  res = None, 
-#                  genes = None, 
-#                  full_res_denoised = None):
-#     i = np.where(genes == g)[0][0]
-#     pars = res[i][0].copy()
-#     num_comps = int((len(pars)-3)/3)
-#     times = res[i][1].copy()
-#     (chrom_switches, alpha_cs, scale_ccs, chrom_on, c0s) = res[i][2]
-#     u_all = rna[:,g].layers['Mu'].copy()
-#     s_all = rna[:,g].layers['Ms'].copy()
-#     std_u = np.std(u_all)
-#     std_s = np.std(s_all)
-#     scale_u = std_u/std_s
+"""
+Adapted from MultiVelo.
 
-#     c,u,s = func_to_optimize(g, chrom_switches, alpha_cs, scale_ccs, c0s, pars, times = times,
-#                             chrom_on = chrom_on, full_res_denoised = full_res_denoised)
-#     std_c = np.std(np.sum(c,1))
-#     scale_c = std_c/std_s
-#     scale_u = std_u/std_s
-#     c/=scale_c
-#     c = c*(gene_weights.loc[:,g].values*(max_c-min_c))
-#     resc_u = pars[3*num_comps]
-#     u = u*(gene_weights.loc[:,g].values*(max_c-min_c))*resc_u
-#     s = s*(gene_weights.loc[:,g].values*(max_c-min_c))
+Original MultiVelo copyright:
+Copyright (c) 2021, Welch Lab.
 
-#     offs_u = 0
-#     offs_s = 0
-#     ordr = np.argsort(np.ravel(times))
-#     if not archevelo:
-#         fig, axs = mv_scatter_plot_return(model_to_use, g, 
-#                                           pointsize = pointsize,
-#                                           linewidth=lw,
-#                                           colr = color,
-#                                           show_switches=False,
-#                                           alpha = alpha,
-#                                           #color_by = 'celltype'
-#                                           figsize = fsize,
-#                                           fig = fig,axs = axs
-#                                           )
-#         if gray:
-#             axs[0,0].scatter(s_all, u_all, c = 'darkgray', s = pointsize)
-#     else:
-#         ax.plot(np.sum(s,1)[ordr], (np.sum(u,1)*scale_u)[ordr], 
-#                      c = color, lw = lw,alpha =alpha)
-#         if gray:
-#             ax.scatter(s_all, u_all, c = 'darkgray', s = pointsize)
-#     return fig, axs
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
 def mv_scatter_plot_return(adata,
                  genes,
                  by='us',

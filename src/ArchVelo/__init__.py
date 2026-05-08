@@ -4,7 +4,6 @@ from .archetypal_regression import *
 RNA velocity analysis from scRNA+ATAC-seq with ArchVelo.
 """
 
-# A standard place for the package version
 __version__ = "0.1.0"
 
 # --- Utilities ---
