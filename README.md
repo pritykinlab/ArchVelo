@@ -38,7 +38,7 @@ adata_rna = sc.read_h5ad(PATH_TO_RNA)
 adata_atac_raw = sc.read_h5ad(PATH_TO_ATAC)
 model_outdir = MODEL_OUTDIR
 num_comps = NUM_COMPS
-# peak annotation dataframe should have peak names in the index and corresponding gene in the 'gene' column
+# peak_annotation should map each peak to one gene, containing adata_atac_raw.var_names in the index and the corresponding genes in the 'gene' column
 peak_annotation = pd.read_csv(PATH_TO_PEAK_ANNOTATION, index_col = [0])
 
 av.preprocess_rna(adata_rna)
