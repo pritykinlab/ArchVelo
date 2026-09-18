@@ -9,6 +9,44 @@ import scanpy as sc
 import multivelo as mv
 import scipy
 
+import scvelo as scv
+
+def preprocess_atac(adata_atac_raw, min_counts_per_cell = 1000, frac_cells_per_peak = 0.01, theta = 1):
+    adata_atac_raw.layers['raw_counts'] = adata_atac_raw.X.copy()
+    sc.pp.filter_cells(adata_atac_raw, min_counts=min_counts_per_cell)
+    sc.pp.filter_genes(adata_atac_raw, min_cells=frac_cells_per_peak*adata_atac_raw.shape[0])
+    adata_atac_raw.layers['poisson_corrected'] = np.ceil(adata_atac_raw.layers['raw_counts']/2)
+    adata_atac_raw.X = np.array(adata_atac_raw.layers["poisson_corrected"].copy())
+    sc.experimental.pp.normalize_pearson_residuals(adata_atac_raw, theta=theta)
+    adata_atac_raw.layers["pearson"] = adata_atac_raw.X.copy()
+    
+def preprocess_rna(adata_rna, n_pcs=30, n_neigh=50, min_shared_counts = 30, n_top_genes = 1000):
+    scv.pp.filter_and_normalize(adata_rna, 
+                                min_shared_counts=min_shared_counts, 
+                                n_top_genes=n_top_genes)
+    sc.tl.pca(adata_rna, n_pcs)
+    sc.pp.neighbors(adata_rna, n_neigh, n_pcs=n_pcs)
+    scv.pp.moments(adata_rna, n_pcs=n_pcs, n_neighbors=n_neigh)
+    sc.tl.umap(adata_rna)
+
+def intersect_cells(adata_rna, adata_atac_raw):
+    shared_cells = pd.Index(np.intersect1d(adata_rna.obs_names, adata_atac_raw.obs_names))
+    adata_rna = adata_rna[shared_cells,:].copy()
+    adata_atac_raw = adata_atac_raw[shared_cells,:].copy()
+    return adata_rna, adata_atac_raw
+
+def filter_genes_and_peaks(adata_rna, adata_atac_raw, peak_annotation):
+    mapped_genes = peak_annotation['gene'].dropna().unique()
+    rna_genes = adata_rna.var_names
+    atac_raw_genes = peak_annotation.loc[adata_atac_raw.var_names]['gene'].dropna().unique()
+    shared_genes_total = mapped_genes
+    shared_genes_total = np.intersect1d(shared_genes_total, rna_genes)
+    shared_genes_total = np.intersect1d(shared_genes_total, atac_raw_genes)
+    rel_peaks_total = adata_atac_raw.var_names[peak_annotation.loc[adata_atac_raw.var_names,:]['gene'].isin(shared_genes_total).values]
+    adata_rna = adata_rna[:, shared_genes_total].copy()
+    adata_atac_raw = adata_atac_raw[:, rel_peaks_total].copy()
+    return adata_rna, adata_atac_raw
+
 def multivelo_connectivities(adata_rna, n_neighbors = 30, n_pcs=30):
     if ('connectivities' not in adata_rna.obsp.keys() or
             (adata_rna.obsp['connectivities'] > 0).sum(1).min()

@@ -119,7 +119,12 @@ def apply_MultiVelo_AA(adata_rna, XC_raw, S_raw, peak_annotation, nn_idx=None, n
                                                   n_neighbors=n_neighbors, n_pcs=n_pcs)
     return full_res_denoised
 
-def apply_ArchVelo_full(adata_rna, atac_AA_denoised, smooth_arch, gene_weights, model_outdir, gene_list=None, method='Nelder-Mead', maxiter1=1500, max_outer_iter=3, update_mode='cells', n_jobs=-1, n_neighbors=50, n_pcs=50, verbose=False):
+def apply_ArchVelo_full(adata_rna, 
+                        atac_AA_denoised, 
+                        smooth_arch, 
+                        gene_weights, 
+                        model_outdir, 
+                        gene_list=None, method='Nelder-Mead', maxiter1=1500, max_outer_iter=3, update_mode='cells', n_jobs=-1, n_neighbors=50, n_pcs=50, verbose=False):
     full_res_denoised = mv.recover_dynamics_chrom(adata_rna.copy(), atac_AA_denoised, gene_list=gene_list, weight_c=0.6, n_jobs=n_jobs, n_neighbors=n_neighbors, n_pcs=n_pcs)
     full_res_denoised.write(model_outdir+'multivelo_result_denoised_chrom.h5ad')
     

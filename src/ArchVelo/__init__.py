@@ -20,7 +20,11 @@ from .preprocessing import (
     annotate_and_summarize,
     smooth_archetypes,
     extract_wnn_connectivities,
-    gen_wnn
+    gen_wnn,
+    preprocess_rna,
+    preprocess_atac,
+    intersect_cells,
+    filter_genes_and_peaks
 )
 
 # --- Core Modeling and Workflow Functions ---
@@ -95,7 +99,11 @@ __all__ = [
     "annotate_and_summarize",
     "smooth_archetypes",
     "extract_wnn_connectivities",
-    "gen_wnn"
+    "gen_wnn",
+    "preprocess_atac",
+    "preprocess_rna",
+    "intersect_cells",
+    "filter_genes_and_peaks",
 
     # Modeling
     "create_denoised_atac",

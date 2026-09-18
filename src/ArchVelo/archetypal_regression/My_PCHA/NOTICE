@@ -1,0 +1,14 @@
+This subpackage contains modified code derived from work by Morten Mørup
+and Ulf Aslak.
+
+Original upstream copyright:
+Copyright (c) 2012, Morten Mørup (morten.morup@gmail.com),
+Ulf Aslak (ulfjensen@gmail.com). All rights reserved.
+
+The original upstream LICENCE file is included unchanged in this directory.
+
+Modifications:
+Copyright (c) 2026, Pritykin Lab.
+
+Unless otherwise stated, modifications made by Pritykin Lab are distributed
+under the BSD 3-Clause License in the root LICENSE file of this repository.

@@ -77,5 +77,5 @@ def furthest_sum(K, noc, i, exclude=[]):
             ind_t = t[ind]
             i.append(ind_t)
             index[ind_t] = -1
-    print(i)
+    #print(i)
     return i
