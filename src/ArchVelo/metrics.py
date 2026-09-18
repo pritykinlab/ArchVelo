@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import wilcoxon
-from statsmodels.sandbox.stats.multicomp import multipletests
+from statsmodels.stats.multitest import multipletests
 def summary_scores(all_scores):
     """Summarize group scores.
     
